@@ -1,47 +1,72 @@
-#include <stdio.h> // printf scanf fopen
-#include <string.h>
-#include <stdlib.h> // atoi()
+#include <stdio.h> //printf
+#include <stdlib.h> // malloc realloc
+#include <ctype.h>  //atoi
+#include <stdint.h> 
 
+#define FILENAME "input.txt"
 #define IPT_SIZE 1000
-#define MAX_LINE_LEN 25
+#define MAX_LINE_LENGTH 25
+
+
+// structs
+typedef struct String {
+    char *text;
+    int32_t len;
+} String;
 
 // prototypes
+char String_GET(String string, int i);
+void free_line(String string);
+int part1();
 
-/*
-typedef struct node {
-    int num;
-    struct node *next;
-} node;
-*/
+int main() {
+    part1();
 
-int main(void) {
-    FILE *file = fopen("input", "r");
+    return 0;
+}
+
+int part1() {
+    FILE *file = fopen(FILENAME, "r");
     if (!file) {
         return -1;
-    }
+    };
 
-    // first we need to convert our input
+    // int line_num = 0;
+    // read line
+    // i is line number
+    String line = (String) {NULL, 0};
+    line.text = malloc(sizeof(char) * (uint64_t) (line.len * 1));
 
-    int sim_score = 0;
+   for (int i = 0; i < IPT_SIZE; i++) {
 
-    char line[MAX_LINE_LEN];
-    char *ptr_chr;
-    char *token;
-    char delim[] = " ";
-    for (int i = 0; i < IPT_SIZE; i++) {
-        ptr_chr = fgets(line, MAX_LINE_LEN, file);
-
-
-        token = strtok(line, delim);
-
-        while (token != NULL) {
-            
-            printf("%s ", token);
-            token = strtok(NULL, delim); // Use NULL when calling strtok again on same str
-
+        char c = ' ';
+        // load line 
+        while (fread(&c, sizeof(char), 1, file)) {
+            if (c == '\n') {
+                printf("breaking out of for-loop\n");
+                break;
+            }
+            line.text = realloc(line.text, sizeof(char) * (uint64_t) line.len + 1);
+            line.text[line.len] = c;
+            line.len++;
         }
 
+        line.text[line.len] = '\n';
+        printf("%s", line.text);
+        break;
 
     }
-    return 0;
+    free_line(line);
+    return 1;
+}
+
+char String_GET(String string, int32_t i) {
+    if (i > string.len || i < 0 ) {
+        printf("error");
+    }
+    return string.text[i];
+}
+
+void free_line(String string) {
+    free(string.text);
 }
