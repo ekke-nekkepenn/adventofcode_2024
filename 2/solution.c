@@ -65,7 +65,7 @@ bool is_line_level_valid(String line) {
     for (int i = 0; i < line.len; i++) {
         // at space gets the recent num and converts to num
         if (' ' == line.buffer[i] || '\0' == line.buffer[i]) {
-            memcpy(buffer, line.buffer + low, i);
+            memcpy(buffer, line.buffer + low, i - low);
             buffer[i - low] = '\0';
             printf("%d ", atoi(buffer));
             low = i + 1;
