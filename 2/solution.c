@@ -1,22 +1,22 @@
-#include <stdio.h> //printf
-#include <stdlib.h> // malloc realloc
-#include <ctype.h>  //atoi
-#include <stdint.h> 
+#include <ctype.h>    //atoi
+#include <stdbool.h>  // bool
+#include <stdint.h>   // int32_t
+#include <stdio.h>    //printf
+#include <stdlib.h>   // malloc realloc
+#include <string.h>
 
 #define FILENAME "input.txt"
 #define IPT_SIZE 1000
-#define MAX_LINE_LENGTH 25
+#define MAX_LINE_LEN 30
 
-
-// structs
+// struct
 typedef struct String {
-    char *text;
-    int32_t len;
+    int16_t len;
+    char *buffer;
 } String;
 
 // prototypes
-char String_GET(String string, int i);
-void free_line(String string);
+bool is_line_level_valid(String line);
 int part1();
 
 int main() {
@@ -28,45 +28,53 @@ int main() {
 int part1() {
     FILE *file = fopen(FILENAME, "r");
     if (!file) {
+        perror("test");
         return -1;
     };
 
-    // int line_num = 0;
-    // read line
-    // i is line number
-    String line = (String) {NULL, 0};
-    line.text = malloc(sizeof(char) * (uint64_t) (line.len * 1));
+    String line = (String){0, malloc(sizeof(1) * MAX_LINE_LEN)};
 
-   for (int i = 0; i < IPT_SIZE; i++) {
-
-        char c = ' ';
-        // load line 
-        while (fread(&c, sizeof(char), 1, file)) {
+    int level_total = 0;
+    for (int i = 0; i < IPT_SIZE; i++) {
+        char c;
+        for (int j = 0; j < MAX_LINE_LEN; j++) {
+            fread(&c, sizeof(char), 1, file);
+            // we rached end of line
             if (c == '\n') {
-                printf("breaking out of for-loop\n");
+                line.buffer[j] = '\0';
+                line.len = j + 1;
+                bool validity = is_line_level_valid(line);
+                if (validity) level_total++;
                 break;
             }
-            line.text = realloc(line.text, sizeof(char) * (uint64_t) line.len + 1);
-            line.text[line.len] = c;
-            line.len++;
+
+            // fill up line.buffer
+            line.buffer[j] = c;
+            line.len = j + 1;
         }
-
-        line.text[line.len] = '\n';
-        printf("%s", line.text);
-        break;
-
     }
-    free_line(line);
     return 1;
 }
 
-char String_GET(String string, int32_t i) {
-    if (i > string.len || i < 0 ) {
-        printf("error");
+bool is_line_level_valid(String line) {
+    // find out if the rules for a level applies
+    bool validity = false;
+    char buffer[3];
+
+    int low = 0;
+    for (int i = 0; i < line.len; i++) {
+        // at space gets the recent num and converts to num
+        if (' ' == line.buffer[i] || '\0' == line.buffer[i]) {
+            memcpy(buffer, line.buffer + low, i);
+            buffer[i - low] = '\0';
+            printf("%d ", atoi(buffer));
+            low = i + 1;
+
+        }
     }
-    return string.text[i];
+    // .
+    printf("\n");
+
+    return validity;
 }
 
-void free_line(String string) {
-    free(string.text);
-}
