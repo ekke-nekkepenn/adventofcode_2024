@@ -8,6 +8,8 @@
 #define FILENAME "input.txt"
 #define IPT_SIZE 1000 // total line amount
 #define MAX_LINE_LEN 30  // technically longer than len of any line
+#define BUFFER_SIZE 3
+#define INTARR_CAPACITY 10
 
 // Struct
 typedef struct {
@@ -65,9 +67,9 @@ int part1() {
 }
 
 IntArray convert(String line) {
-    char buffer[3]; // no number is bigger than 2 digets
+    char buffer[BUFFER_SIZE];
 
-    int capacity = 10;
+    int capacity = INTARR_CAPACITY;
     IntArray arr = (IntArray) {malloc(sizeof(int) * capacity), 0, capacity};
 
     for (int i = 0, low = 0; i <= line.len; i++) {
@@ -80,44 +82,45 @@ IntArray convert(String line) {
             arr.len++;
         }
     }
-
     return arr;
 }
 
 bool is_safe(IntArray arr) {
-    /* this whole function is just garbage jank. I am so sorry*/
-    bool v = true;
-    int dampner = 0; // this is explained in the problem. 
-    bool inc = false; // increase in value?
-    bool dec = false; // decrease in value? 
-    bool incdec = false; // idk fk this
+    bool safety = true;
+    bool rising = false, falling = false;
+    bool life = true;
 
     for (int i = 0; i < arr.len - 1; i++) {
+
         int d = arr.items[i + 1] - arr.items[i];
 
-        if (0 == d || d > 3 || d < -3) {
-            v = false;
-            dampner++;
+        if (d == 0 || d > 3 || d < -3) {
+            if (life) {
+                life = false;
+                continue;
+            }
+            safety = false;
         }
 
-        if (d > 0) inc = true; 
-        if (d < 0) dec = true;
+        if (d > 0) rising = true;
+        if (d < 0) falling = true;
 
-        if(inc == dec && !incdec) { // WTF AM I DOING
-            dampner++;
-            incdec = true; // this should only be once
+        if (rising && falling) {
+            if (life) {
+                life = false;
+                if (arr.items[i] - arr.items[i - 1] > 0) falling = false;
+                else if(arr.items[i] - arr.items[i - 1] < 0) rising = false;
+            }
+            else safety = false;
+
         }
-
-                
     }
-    if (inc == dec) v = false;
-    if (dampner == 1) v = true;
-    return v;
 
+    return safety;
 }
 
 //bool is_safe(IntArray arr) {
-//
+//    // this works part 1
 //    bool inc = false; 
 //    bool dec = false;
 //    for (int i = 0; i < arr.len - 1; i++) {
