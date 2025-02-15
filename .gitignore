@@ -1,4 +1,4 @@
-*/Makefile
-*/.vscode
-*/solution
-
+Makefile
+/.vscode
+solution
+*.out
