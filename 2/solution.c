@@ -39,9 +39,9 @@ int part1() {
     String line = (String) {malloc(sizeof(char) * MAX_LINE_LEN), 0};
 
     int safety_total = 0;
+    IntArray arr;
     for (int i = 0; i < IPT_SIZE; i++) {
 
-        IntArray arr;
         char c;
         for (int j = 0; j < MAX_LINE_LEN; j++) {
             fread(&c, sizeof(char), 1, file);
@@ -49,7 +49,7 @@ int part1() {
             if (c == '\n') {
                 line.buffer[j] = '\0';
                 
-                IntArray arr = convert(line);
+                arr = convert(line);
                 if (is_safe(arr)) 
                     safety_total++;
 
@@ -62,6 +62,8 @@ int part1() {
         free(arr.items);
     }
 
+    free(line.buffer);
+    fclose(file);
     printf("Total amount of safe lines: %d\n", safety_total);
     return 0;
 }
