@@ -1,13 +1,15 @@
 #include <stdio.h>
 #include <regex.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
 
-#define FILENAME "input.txt"
-#define LINE_LEN 22000
+#define FILENAME    "input.txt"
+#define LINE_LEN    22000
 
 typedef struct {
-    char *ptr; // beginning of string
-    int length;
+    char    *ptr; // beginning of string
+    int     length;
 } String;
 
 
@@ -36,37 +38,68 @@ void part1(void) {
         Text.length++;
     }
     
-    print_string(Text);
-    printf("\n\n\n");
+    regex_t     regex;
+    regmatch_t  pmatch[3]; // match stored here
 
-    regex_t regex;
-    while (1) {
-        char msgbuf[100];
-        char *pattern = "mul\\(+\\d,+\\d\\)";
-        int regc = regcomp(&regex, pattern, 0);
-        if (regc) {
-            break;
-        }
+    char *pattern = "mul\\(([0-9]+),([0-9]+)\\)";
+    int regc = regcomp(&regex, pattern, REG_EXTENDED); // regc = 0 successful
+    // REG_EXTENDED flag, link below for more info
+    // https://en.wikibooks.org/wiki/Regular_Expressions/POSIX-Extended_Regular_Expressions 
 
-        regc = regexec(&regex, Text.ptr, 0, NULL, 0);
-        if (!regc) {
-            printf("Match");
-        }
-        else if (regc == REG_NOMATCH) {
-            printf("No Match");
-        }
-        else {
-            regerror(regc, &regex, msgbuf, sizeof(msgbuf));
-            break;
-        }
-        break;
+    if (regc) {
+        free_string(Text);
+        fclose(file);
     }
-    for (int i = 0; i < Text.length; i++)
+
+    int start = 0;    
+    int end = 0;
+    char *ptr = Text.ptr + end; // need to use *ptr or else we get a warning idk
+
+    char num_buffer[10]; // here we atoi our string number 
+    int total = 0;
+    int64_t num;
+    while (1) {
+        regc = regexec(&regex, ptr, 3, pmatch, 0);
+        if (regc != 0) {
+            break;
+        }
+        // first num
+        int start = pmatch[1].rm_so;
+        int end = pmatch[1].rm_eo;
+
+        memcpy(num_buffer, ptr + start, end - start);
+        num_buffer[end-start] = '\0';
+        num = atoi(num_buffer);
+
+        start = pmatch[2].rm_so;
+        end = pmatch[2].rm_eo;
+
+        memcpy(num_buffer, ptr + start, end - start);
+        num_buffer[end-start] = '\0';
+        total += num * atoi(num_buffer);
+
+        //start = pmatch[2].rm_so;
+        //end = pmatch[2].rm_eo;
+
+        //for (int i = start; i < end; i++) {
+        //    printf("%c", *(ptr + i));
+        //}
+        //printf("  ");
 
 
-    regfree(&regex);
+
+
+
+
+        ptr = ptr + end;
+    }
+    printf("\n");
+    printf("%d\n", total);
+
+
+    
+    regfree(&regex); // used after regexec() not if regcomp failed
     free_string(Text);
-
     fclose(file);
 }
 
