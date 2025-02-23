@@ -16,10 +16,12 @@ typedef struct {
 
 void print_string(String s);
 void part1(void);
+void part2(void);
 void free_string(String s);
 
 int main(void) {
-    part1();
+    //part1();
+    part2();
 
     return 0;
 }
@@ -51,9 +53,8 @@ void part1(void) {
         fclose(file);
     }
 
-    int start = 0;    
-    int end = 0;
-    char *ptr = Text.ptr + end; // need to use *ptr or else we get a warning idk
+
+    char *ptr = Text.ptr; // we wanna override ptr and not lose Text.ptr
 
     char num_buffer[10]; // here we atoi our string number 
     int total = 0;
@@ -63,7 +64,8 @@ void part1(void) {
         if (regc != 0) {
             break;
         }
-        // first num
+        // pmatch[0] is the whole match
+        // every other element in pmatch is a subexpression 
         int start = pmatch[1].rm_so;
         int end = pmatch[1].rm_eo;
 
@@ -101,6 +103,65 @@ void part1(void) {
     regfree(&regex); // used after regexec() not if regcomp failed
     free_string(Text);
     fclose(file);
+}
+
+void part2(void) {
+    // open file
+    FILE *file = fopen(FILENAME, "r");
+    if (file == NULL) {
+        printf("File could not opened.");
+        return;
+    }
+
+    // determine length of file
+    fseek(file, 0, SEEK_END);   // go to the end pos of file
+    int64_t file_length = ftell(file);  // returns current pos which is the length
+    fseek(file, 0, SEEK_SET); // reset pos 
+
+    // alloc mem for String and read file into 
+    String Text = (String) {malloc(sizeof(char) * file_length), file_length};
+    fread(Text.ptr, sizeof(char), Text.length, file);
+    Text.ptr[Text.length] = '\0'; 
+    
+    // file not needed anymore
+    fclose(file);
+
+    // compile regexes 1 for don't() 1 for do() 1 for mul(...)
+    regex_t     mul_regex;
+    regex_t     dont_regex;
+    regex_t     do_regex;
+
+    regmatch_t  mul_match[3];
+    regmatch_t  dont_match[1];
+    regmatch_t  do_match[1];
+
+    char *mul_pattern = "mul\\(([0-9]+),([0-9]+)\\)";
+    char *dont_pattern = "don't\\(\\)";
+    char *do_pattern = "do\\(\\)";
+
+    int regc = regcomp(&dont_regex, dont_pattern, REG_EXTENDED);
+    if (regc) {
+        free_string(Text);
+        return;
+    }
+    char *s = Text.ptr;
+    regc = regexec(&dont_regex, s, 1, dont_match, 0);
+    if (regc != 0) {
+        free_string(Text);
+        return;
+    }
+    int start = dont_match[0].rm_so;
+    int end = dont_match[0].rm_eo;
+
+    for (int i = start; i < end; i++) {
+        printf("%c", s[i]);
+    }
+    
+    
+    // find the most recent 
+
+    free_string(Text);    
+    regfree(&dont_regex);
 }
 
 void print_string(String s) {
