@@ -57,7 +57,7 @@ void part1(void) {
 
     char *ptr = Text.ptr; // we wanna override ptr and not lose Text.ptr
 
-    char num_buffer[10]; // here we atoi our string number 
+    char num_buffer[10]; // here we atoi our string number 10 is just randomly chosen
     int total = 0;
     int64_t num;
     while (1) {
@@ -94,6 +94,8 @@ void part1(void) {
 }
 
 void part2(void) {
+    int64_t total = 0; 
+
     // open file
     FILE *file = fopen(FILENAME, "r");
     if (file == NULL) {
@@ -139,23 +141,65 @@ void part2(void) {
     }
 
     // init vars for finding all mul(...) 
-    int start = 0;
-    int end = 0;
-    int regc;
-    char *copy_textptr = Text.ptr; // we wanna change the copy & free old
 
-    // we start start to next "dont()"
+    int slice_start = 0;
+    int slice_end = 0;
 
-    regc = regexec(&dont_regex, copy_textptr, 1, dont_match, 0);
-    end = dont_match[0].rm_so;
+    char tmp; 
+    char num_buffer[10]; // increase 10 if matching number in input has more than 9 digits
 
-    // what we could do is store value in Text.ptr[rm_so] in sep var
-    // then put a '\0' into that position 
-    // regexec over it until no matches happen 
-    // then replace '\0' with the old value
+    // find next "dont()"
+    while (1) {
 
+    regc = regexec(&dont_regex, Text.ptr+slice_start, 1, dont_match, 0);
+    if (regc != 0) {
+        printf("no 'don't()s' found\n");
+        free_string(Text);
+        regfree(&mul_regex);
+        regfree(&dont_regex);
+        regfree(&do_regex);
+        return;
+    }
+    slice_end = dont_match[0].rm_so;
 
+    tmp = Text.ptr[slice_end]; // we wanna put a nul here so regexec know where to stop 
+    Text.ptr[slice_end] = '\0';
 
+    // slice[start:end] now find all matches of "mul()"
+    while (1) {
+        regc = regexec(&mul_regex, Text.ptr + slice_start, 3, mul_match, 0);
+        if (regc != 0) {
+            // no more matches in this slice
+            break;
+        }
+
+        // get 1. and 2. subexpressions in "mul(...)" and multiply them
+        int num = 1; 
+        for (int i = 1; i < 3; i++) {
+            int mstart = mul_match[i].rm_so;
+            int mend = mul_match[i].rm_eo;
+
+            memcpy(num_buffer, Text.ptr + slice_start + mstart, mend - mstart);
+            num_buffer[mend-mstart] = '\0';
+            num = num * atoi(num_buffer);
+        }
+        total += num;
+
+        slice_start += mul_match[0].rm_eo; // "advance" in the slice also 
+
+    }
+    Text.ptr[slice_end] = tmp; // reinsert og char
+
+    // find a next "do()" if no "do()" found we are done
+
+    regc = regexec(&do_regex, Text.ptr + slice_end, 1, do_match, 0);
+    if (regc != 0) {
+        printf("total: %ld", total);
+        return;
+    }
+
+    slice_start = do_match[0].rm_eo;
+    }
 
 
 
@@ -165,9 +209,10 @@ void part2(void) {
 
 
     
-
     // free things
     free_string(Text);    
+    regfree(&mul_regex);
+    regfree(&do_regex);   
     regfree(&dont_regex);
 }
 
@@ -181,6 +226,7 @@ void print_string(String s) {
         printf("%c", s.ptr[i]);
     }
 }
+
 
 void free_string(String s) {
     //printf("(free_string) address ptr: %p\n\n", s.ptr);
