@@ -1,8 +1,9 @@
-#include <stdio.h>
-#include <regex.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
+#include <stdio.h> // fseek() ftell() printf() fread() FILE
+#include <regex.h> // regex_t regmatch_t regexec() regcomp()
+#include <stdlib.h> // atoi()
+#include <string.h> // memcpy()
+#include <stdint.h> // int64_t
+#include <stdbool.h>
 
 #define FILENAME    "input.txt"
 #define LINE_LEN    22000
@@ -12,12 +13,12 @@ typedef struct {
     int     length;
 } String;
 
-
-
-void print_string(String s);
+// PROTOTYPES
 void part1(void);
 void part2(void);
+
 void free_string(String s);
+void print_string(String s);
 
 int main(void) {
     //part1();
@@ -80,19 +81,6 @@ void part1(void) {
         num_buffer[end-start] = '\0';
         total += num * atoi(num_buffer);
 
-        //start = pmatch[2].rm_so;
-        //end = pmatch[2].rm_eo;
-
-        //for (int i = start; i < end; i++) {
-        //    printf("%c", *(ptr + i));
-        //}
-        //printf("  ");
-
-
-
-
-
-
         ptr = ptr + end;
     }
     printf("\n");
@@ -121,48 +109,72 @@ void part2(void) {
     // alloc mem for String and read file into 
     String Text = (String) {malloc(sizeof(char) * file_length), file_length};
     fread(Text.ptr, sizeof(char), Text.length, file);
-    Text.ptr[Text.length] = '\0'; 
+    Text.ptr[Text.length] = '\0';  
     
     // file not needed anymore
     fclose(file);
 
-    // compile regexes 1 for don't() 1 for do() 1 for mul(...)
-    regex_t     mul_regex;
-    regex_t     dont_regex;
-    regex_t     do_regex;
+    // init vars for regcmp() & regexec()
+    regex_t mul_regex;
+    regex_t dont_regex;
+    regex_t do_regex;
 
-    regmatch_t  mul_match[3];
-    regmatch_t  dont_match[1];
-    regmatch_t  do_match[1];
+    regmatch_t mul_match[3]; // [3] coz 2 additional subexpr matches
+    regmatch_t dont_match[1];
+    regmatch_t do_match[1];
 
     char *mul_pattern = "mul\\(([0-9]+),([0-9]+)\\)";
     char *dont_pattern = "don't\\(\\)";
     char *do_pattern = "do\\(\\)";
 
-    int regc = regcomp(&dont_regex, dont_pattern, REG_EXTENDED);
-    if (regc) {
+    int regc = regcomp(&mul_regex, mul_pattern, REG_EXTENDED);
+    int regc1 = regcomp(&dont_regex, dont_pattern, REG_EXTENDED);
+    int regc2 = regcomp(&do_regex, do_pattern, REG_EXTENDED);
+    
+    // check for SUCCESS which is 0
+    if (regc || regc1 || regc2) {
+        printf("Regec compiliation failed.\n");
         free_string(Text);
         return;
     }
-    char *s = Text.ptr;
-    regc = regexec(&dont_regex, s, 1, dont_match, 0);
-    if (regc != 0) {
-        free_string(Text);
-        return;
-    }
-    int start = dont_match[0].rm_so;
-    int end = dont_match[0].rm_eo;
 
-    for (int i = start; i < end; i++) {
-        printf("%c", s[i]);
-    }
-    
-    
-    // find the most recent 
+    // init vars for finding all mul(...) 
+    int start = 0;
+    int end = 0;
+    int regc;
+    char *copy_textptr = Text.ptr; // we wanna change the copy & free old
 
+    // we start start to next "dont()"
+
+    regc = regexec(&dont_regex, copy_textptr, 1, dont_match, 0);
+    end = dont_match[0].rm_so;
+
+    // what we could do is store value in Text.ptr[rm_so] in sep var
+    // then put a '\0' into that position 
+    // regexec over it until no matches happen 
+    // then replace '\0' with the old value
+
+
+
+
+
+
+
+        
+
+
+
+    
+
+    // free things
     free_string(Text);    
     regfree(&dont_regex);
 }
+
+String create_slice(String s, int64_t start, int64_t end) {
+
+}
+
 
 void print_string(String s) {
     for (int i = 0; i < s.length; i++) {
