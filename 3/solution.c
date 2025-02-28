@@ -1,63 +1,72 @@
-#include <stdio.h> // fseek() ftell() printf() fread() FILE
 #include <regex.h> // regex_t regmatch_t regexec() regcomp()
+#include <stdbool.h>
+#include <stdint.h> // int64_t
+#include <stdio.h> // fseek() ftell() printf() fread() FILE
 #include <stdlib.h> // atoi()
 #include <string.h> // memcpy()
-#include <stdint.h> // int64_t
-#include <stdbool.h>
 
-#define FILENAME    "input.txt"
-#define LINE_LEN    22000
+#define FILENAME "input.txt"
+#define LINE_LEN 22000 // used for part1 not needed for part2
+#define MAX_DIGIT 10
+
+#define PATTERN_MUL "mul\\(([0-9]+),([0-9]+)\\)"
+#define PATTERN_DONT "don't\\(\\)"
+#define PATTERN_DO "do\\(\\)"
 
 typedef struct {
-    char    *ptr; // beginning of string
-    int     length;
+    char* ptr; // beginning of string
+    int length;
 } String;
 
 // PROTOTYPES
 void part1(void);
 void part2(void);
 
+int64_t find_muls(char* s, int64_t* oS, int64_t* oE, regex_t* regex_mul, regmatch_t* match_mul);
+
 void free_string(String s);
 void print_string(String s);
 
-int main(void) {
-    //part1();
+int main(void)
+{
+    // part1();
     part2();
 
     return 0;
 }
 
-void part1(void) {
-    FILE *file = fopen(FILENAME, "r");
+void part1(void)
+{
+    FILE* file = fopen(FILENAME, "r");
     if (NULL == file) {
         printf("Could not open %s\n", FILENAME);
         return;
     }
-    String Text = (String) {malloc(sizeof(char) * LINE_LEN), 0};
 
-    char c;
-    while (fread(&c, sizeof(char), 1, file)) {
-        Text.ptr[Text.length] = c;
-        Text.length++;
-    }
-    
-    regex_t     regex;
-    regmatch_t  pmatch[3]; // match stored here
+    fseek(file, 0, SEEK_END); // go to the end pos of file
+    int64_t file_length = ftell(file); // returns current pos which is the length
+    fseek(file, 0, SEEK_SET);
+    String Text = (String) { malloc(sizeof(char) * file_length), file_length };
 
-    char *pattern = "mul\\(([0-9]+),([0-9]+)\\)";
-    int regc = regcomp(&regex, pattern, REG_EXTENDED); // regc = 0 successful
+    fread(Text.ptr, 1, file_length, file);
+    Text.ptr[Text.length] = '\0';
+
+    regex_t regex;
+    regmatch_t pmatch[3]; // match stored here
+
+    int regc = regcomp(&regex, PATTERN_MUL, REG_EXTENDED); // regc = 0 successful
     // REG_EXTENDED flag, link below for more info
-    // https://en.wikibooks.org/wiki/Regular_Expressions/POSIX-Extended_Regular_Expressions 
+    // https://en.wikibooks.org/wiki/Regular_Expressions/POSIX-Extended_Regular_Expressions
 
     if (regc) {
         free_string(Text);
         fclose(file);
     }
 
+    char* ptr = Text.ptr; // we wanna override ptr and not lose Text.ptr
 
-    char *ptr = Text.ptr; // we wanna override ptr and not lose Text.ptr
-
-    char num_buffer[10]; // here we atoi our string number 10 is just randomly chosen
+    char num_buffer[10]; // here we atoi our string number 10 is just randomly
+                         // chosen
     int total = 0;
     int64_t num;
     while (1) {
@@ -66,19 +75,19 @@ void part1(void) {
             break;
         }
         // pmatch[0] is the whole match
-        // every other element in pmatch is a subexpression 
+        // every other element in pmatch is a subexpression
         int start = pmatch[1].rm_so;
         int end = pmatch[1].rm_eo;
 
         memcpy(num_buffer, ptr + start, end - start);
-        num_buffer[end-start] = '\0';
+        num_buffer[end - start] = '\0';
         num = atoi(num_buffer);
 
         start = pmatch[2].rm_so;
         end = pmatch[2].rm_eo;
 
         memcpy(num_buffer, ptr + start, end - start);
-        num_buffer[end-start] = '\0';
+        num_buffer[end - start] = '\0';
         total += num * atoi(num_buffer);
 
         ptr = ptr + end;
@@ -86,149 +95,95 @@ void part1(void) {
     printf("\n");
     printf("%d\n", total);
 
-
-    
     regfree(&regex); // used after regexec() not if regcomp failed
     free_string(Text);
     fclose(file);
 }
 
-void part2(void) {
-    int64_t total = 0; 
+void part2(void)
+{
 
     // open file
-    FILE *file = fopen(FILENAME, "r");
+    FILE* file = fopen(FILENAME, "r");
     if (file == NULL) {
         printf("File could not opened.");
         return;
     }
 
     // determine length of file
-    fseek(file, 0, SEEK_END);   // go to the end pos of file
-    int64_t file_length = ftell(file);  // returns current pos which is the length
-    fseek(file, 0, SEEK_SET); // reset pos 
+    fseek(file, 0, SEEK_END); // go to the end pos of file
+    int64_t file_length = ftell(file); // returns current pos which is the length
+    fseek(file, 0, SEEK_SET); // reset pos
 
-    // alloc mem for String and read file into 
-    String Text = (String) {malloc(sizeof(char) * file_length), file_length};
+    // load file into String and close it
+    String Text = (String) { malloc(sizeof(char) * file_length), file_length };
     fread(Text.ptr, sizeof(char), Text.length, file);
-    Text.ptr[Text.length] = '\0';  
-    
-    // file not needed anymore
+    Text.ptr[Text.length] = '\0';
     fclose(file);
 
-    // init vars for regcmp() & regexec()
-    regex_t mul_regex;
-    regex_t dont_regex;
-    regex_t do_regex;
+    // compile regex
+    regex_t regex_mul;
+    regex_t regex_dont;
+    regex_t regex_do;
 
-    regmatch_t mul_match[3]; // [3] coz 2 additional subexpr matches
-    regmatch_t dont_match[1];
-    regmatch_t do_match[1];
-
-    char *mul_pattern = "mul\\(([0-9]+),([0-9]+)\\)";
-    char *dont_pattern = "don't\\(\\)";
-    char *do_pattern = "do\\(\\)";
-
-    int regc = regcomp(&mul_regex, mul_pattern, REG_EXTENDED);
-    int regc1 = regcomp(&dont_regex, dont_pattern, REG_EXTENDED);
-    int regc2 = regcomp(&do_regex, do_pattern, REG_EXTENDED);
-    
-    // check for SUCCESS which is 0
-    if (regc || regc1 || regc2) {
-        printf("Regec compiliation failed.\n");
+    if (regcomp(&regex_mul, PATTERN_MUL, REG_EXTENDED) || regcomp(&regex_dont, PATTERN_DONT, REG_EXTENDED)
+        || regcomp(&regex_do, PATTERN_DONT, REG_EXTENDED)) {
+        printf("Regex compiliation failed.\n");
         free_string(Text);
         return;
     }
 
-    // init vars for finding all mul(...) 
+    regmatch_t match_mul[3]; // [3] coz 2 additional subexpr matches
+    regmatch_t match_dont[1];
+    regmatch_t match_do[1];
 
-    int slice_start = 0;
-    int slice_end = 0;
+    int64_t offset_start = 0;
+    int64_t offset_end = 0;
 
-    char tmp; 
-    char num_buffer[10]; // increase 10 if matching number in input has more than 9 digits
+    bool donts = true;
 
-    // find next "dont()"
-    while (1) {
-
-    regc = regexec(&dont_regex, Text.ptr+slice_start, 1, dont_match, 0);
-    if (regc != 0) {
-        printf("no 'don't()s' found\n");
-        free_string(Text);
-        regfree(&mul_regex);
-        regfree(&dont_regex);
-        regfree(&do_regex);
-        return;
+    int64_t total = 0;
+    while (true) {
     }
-    slice_end = dont_match[0].rm_so;
 
-    tmp = Text.ptr[slice_end]; // we wanna put a nul here so regexec know where to stop 
-    Text.ptr[slice_end] = '\0';
+    char tmp;
+    char num_buffer[MAX_DIGIT];
 
-    // slice[start:end] now find all matches of "mul()"
-    while (1) {
-        regc = regexec(&mul_regex, Text.ptr + slice_start, 3, mul_match, 0);
-        if (regc != 0) {
-            // no more matches in this slice
+    // free things
+    free_string(Text);
+    regfree(&regex_mul);
+    regfree(&regex_dont);
+    regfree(&regex_do);
+}
+
+int64_t find_muls(char* s, int64_t* offset_start, int64_t* offset_end, regex_t* regex_mul, regmatch_t* match_mul)
+{
+    // modify s so it ends at *oE with a '\0' so regexec() knows where to stop
+    char tmp = s[*offset_end];
+    s[*offset_end] = '\0';
+
+    int64_t num = 0;
+
+    while (true) {
+        if (regexec(regex_mul, s + *offset_start, 3, match_mul, 0) != 0) {
             break;
         }
 
-        // get 1. and 2. subexpressions in "mul(...)" and multiply them
-        int num = 1; 
-        for (int i = 1; i < 3; i++) {
-            int mstart = mul_match[i].rm_so;
-            int mend = mul_match[i].rm_eo;
-
-            memcpy(num_buffer, Text.ptr + slice_start + mstart, mend - mstart);
-            num_buffer[mend-mstart] = '\0';
-            num = num * atoi(num_buffer);
-        }
-        total += num;
-
-        slice_start += mul_match[0].rm_eo; // "advance" in the slice also 
-
+        *offset_start = *offset_start + match_mul[0].rm_eo;
     }
-    Text.ptr[slice_end] = tmp; // reinsert og char
-
-    // find a next "do()" if no "do()" found we are done
-
-    regc = regexec(&do_regex, Text.ptr + slice_end, 1, do_match, 0);
-    if (regc != 0) {
-        printf("total: %ld", total);
-        return;
-    }
-
-    slice_start = do_match[0].rm_eo;
-    }
-
-
-
-
-        
-
-
-
-    
-    // free things
-    free_string(Text);    
-    regfree(&mul_regex);
-    regfree(&do_regex);   
-    regfree(&dont_regex);
+    s[*offset_end] = tmp;
+    return num;
 }
 
-String create_slice(String s, int64_t start, int64_t end) {
-
-}
-
-
-void print_string(String s) {
+void print_string(String s)
+{
     for (int i = 0; i < s.length; i++) {
         printf("%c", s.ptr[i]);
     }
 }
 
-
-void free_string(String s) {
-    //printf("(free_string) address ptr: %p\n\n", s.ptr);
+void free_string(String s)
+{
+    // printf("(free_string) address ptr: %p\n\n", s.ptr);
     free(s.ptr);
 }
