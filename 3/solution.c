@@ -24,7 +24,6 @@ void part2(void);
 int64_t find_muls(char* string, int64_t offset_start, int64_t offset_end, regex_t* regex_mul, regmatch_t* match_mul);
 
 void free_string(String s);
-void print_string(String s);
 
 int main(void)
 {
@@ -112,7 +111,7 @@ void part2(void)
 
     // determine length of file
     fseek(file, 0, SEEK_END); // go to the end pos of file
-    int64_t file_length = ftell(file); // returns current pos which is the length
+    int64_t file_length = ftell(file) + 1; // returns current pos which is the length +1 for the added '\0'
     fseek(file, 0, SEEK_SET); // reset pos
 
     // load file into String and close it
@@ -199,13 +198,6 @@ int64_t find_muls(char* string, int64_t offset_start, int64_t offset_end, regex_
     }
 
     return total;
-}
-
-void print_string(String s)
-{
-    for (int i = 0; i < s.length; i++) {
-        printf("%c", s.ptr[i]);
-    }
 }
 
 void free_string(String s)
