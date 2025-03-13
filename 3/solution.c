@@ -111,11 +111,11 @@ void part2(void)
 
     // determine length of file
     fseek(file, 0, SEEK_END); // go to the end pos of file
-    int64_t file_length = ftell(file) + 1; // returns current pos which is the length +1 for the added '\0'
+    int64_t file_length = ftell(file); // returns current pos which is the length +1 for the added '\0'
     fseek(file, 0, SEEK_SET); // reset pos
 
     // load file into String and close it
-    String Text = (String) { malloc(sizeof(char) * file_length), file_length };
+    String Text = (String) { malloc(sizeof(char) * file_length + 1), file_length + 1 };
     fread(Text.ptr, sizeof(char), Text.length, file);
     Text.ptr[Text.length] = '\0';
     fclose(file);
