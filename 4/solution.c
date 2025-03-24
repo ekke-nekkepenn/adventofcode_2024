@@ -16,11 +16,14 @@
 void part1(FILE *file);
 void part2(FILE *file);
 
-// star_search just bundles all the other searches
-int fixed_star_search(char a[SIZE][SIZE], int len, int x, int y);
-int fixed_search_row(char *row, int len, int x, int dir);
-int fixed_search_column(char a[SIZE][SIZE], int len, int x, int y, int dir);
-int fixed_search_diagonally(char a[SIZE][SIZE], int len, int x, int y, int vx, int vy);
+// these all needed for part1
+int star_search(char a[SIZE][SIZE], int len, int x, int y);
+int search_row(char *row, int len, int x, int dir);
+int search_column(char a[SIZE][SIZE], int len, int x, int y, int dir);
+int search_diagonally(char a[SIZE][SIZE], int len, int x, int y, int vx, int vy);
+
+int cross_search(char **a, int x, int y, int len, int m);
+bool diagonal_search2(char **a, int x, int y, int len, int xdir, int ydir);
 
 int main(int argc, char *argv[])
 {
@@ -90,58 +93,7 @@ void part1(FILE *file)
     printf("Total found matches of %s: %ld\n", WORD, total_matches);
 }
 
-void part2(FILE *file)
-{
-    fseek(file, 0, SEEK_END);
-    int64_t file_len = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    int size_x = 0;
-    int size_y = 0;
-
-    // determine size of x and y
-    char c;
-    for (int i = 0; i < file_len; ++i)
-    {
-        fread(&c, sizeof(char), 1, file);
-        if (c == '\n')
-        {
-            size_y++;
-            size_x = (size_x == 0) ? i : size_x;
-        }
-    }
-    fseek(file, 0, SEEK_SET);
-
-    char **array = malloc(sizeof(char *) * size_y);
-    for (int i = 0; i < size_y; ++i)
-    {
-        char *str = malloc(sizeof(char) * size_x);
-        fread(str, sizeof(char), size_x, file);
-        array[i] = str;
-
-        // hop over '\n'
-        fseek(file, 1, SEEK_CUR);
-    }
-    fclose(file);
-
-    for (int y = 0; y < size_y; ++y)
-    {
-        for (int x = 0; x < size_x; ++x)
-        {
-            if (array[y][x] == WORD)
-        }
-    }
-
-    // clean up step
-    for (int i = 0; i < size_y; ++i)
-    {
-        free(array[i]);
-        array[i] = NULL;
-    }
-    free(array);
-}
-
-int fixed_star_search(char a[SIZE][SIZE], int len, int x, int y)
+int star_search(char a[SIZE][SIZE], int len, int x, int y)
 {
     int matches = 0;
 
@@ -211,7 +163,7 @@ int fixed_star_search(char a[SIZE][SIZE], int len, int x, int y)
     return matches;
 }
 
-int fixed_search_row(char *row, int len, int x, int dir)
+int search_row(char *row, int len, int x, int dir)
 {
     for (int i = 1; i < len; ++i)
     {
@@ -223,7 +175,7 @@ int fixed_search_row(char *row, int len, int x, int dir)
     return 1;
 }
 
-int fixed_search_column(char a[SIZE][SIZE], int len, int x, int y, int dir)
+int search_column(char a[SIZE][SIZE], int len, int x, int y, int dir)
 {
     for (int i = 1; i < len; ++i)
     {
@@ -235,7 +187,7 @@ int fixed_search_column(char a[SIZE][SIZE], int len, int x, int y, int dir)
     return 1;
 }
 
-int fixed_search_diagonally(char a[SIZE][SIZE], int len, int x, int y, int vx, int vy)
+int search_diagonally(char a[SIZE][SIZE], int len, int x, int y, int vx, int vy)
 {
     for (int i = 1; i < len; ++i)
     {
@@ -245,4 +197,103 @@ int fixed_search_diagonally(char a[SIZE][SIZE], int len, int x, int y, int vx, i
         }
     }
     return 1;
+}
+
+void part2(FILE *file)
+{
+    int total_matches = 0;
+    // get file length in # of chars
+    fseek(file, 0, SEEK_END);
+    int64_t file_len = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    int size_x = 0;
+    int size_y = 0;
+
+    // determine size of x and y
+    char c;
+    for (int i = 0; i < file_len; ++i)
+    {
+        fread(&c, sizeof(char), 1, file);
+        if (c == '\n')
+        {
+            size_y++;
+            size_x = (size_x == 0) ? i : size_x;
+        }
+    }
+    // reset file position
+    fseek(file, 0, SEEK_SET);
+
+    // alloctate mem for 2D array & put chars into it
+    char **array = malloc(sizeof(char *) * size_y);
+    for (int i = 0; i < size_y; ++i)
+    {
+        char *str = malloc(sizeof(char) * size_x);
+        fread(str, sizeof(char), size_x, file);
+        array[i] = str;
+
+        // hop over '\n'
+        fseek(file, 1, SEEK_CUR);
+    }
+    fclose(file);
+
+    // get middle index of WORD2
+    int word_len = strlen(WORD2);
+    // m is also the length of one of the 4 cross arms
+    int m = word_len / 2;
+    c = WORD2[m];
+
+    // iter of 3D array and find middle letter of WORD2
+    for (int y = 0; y < size_y; ++y)
+    {
+        for (int x = 0; x < size_x; ++x)
+        {
+            if (array[y][x] == c)
+            {
+                // check if x, y leaves enough room to form a cross
+                if (x - m < 0 || x + m >= size_x || y - m < 0 || y + m >= size_y)
+                {
+                    continue;
+                }
+
+                total_matches = total_matches + cross_search(array, x, y, word_len, m);
+            }
+        }
+    }
+    printf("total matches: %d\n", total_matches);
+
+    // free up step
+    for (int i = 0; i < size_y; ++i)
+    {
+        free(array[i]);
+        array[i] = NULL;
+    }
+    free(array);
+}
+
+int cross_search(char **a, int x, int y, int len, int m)
+{
+    // check if one arm matche
+    if (!diagonal_search2(a, x - m, y - m, len, RIGHT, DOWN) && !diagonal_search2(a, x + m, y + m, len, LEFT, UP))
+    {
+        return 0;
+    }
+
+    if (!diagonal_search2(a, x + m, y - m, len, LEFT, DOWN) && !diagonal_search2(a, x - m, y + m, len, RIGHT, UP))
+    {
+        return 0;
+    }
+    return 1;
+}
+
+bool diagonal_search2(char **a, int x, int y, int len, int xdir, int ydir)
+{
+    for (int i = 0; i < len; ++i)
+    {
+        if (a[y + (i * ydir)][x + (i * xdir)] != WORD2[i])
+        {
+            return false;
+        }
+    }
+    return true;
 }
