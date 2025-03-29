@@ -15,12 +15,19 @@ typedef struct {
     int size;
 } Table;
 
+typedef struct {
+    int *ptr;
+    int len;
+} IntArray;
+
 // sub main function
 int part1(FILE* file);
 int part2(FILE* file);
 
 void fill_table(Table t, FILE* file);
 void free_table(Table t);
+
+IntArray get_next_update(FILE *file);
 
 int main(int argc, char** argv)
 {
@@ -53,6 +60,7 @@ int main(int argc, char** argv)
 
 int part1(FILE* file)
 {
+    int total = 0;
 
     Table priority = (Table) { malloc(sizeof(bool*) * SIZE_TABLE), SIZE_TABLE };
     for (int i = 0; i < SIZE_TABLE; ++i) {
@@ -60,7 +68,28 @@ int part1(FILE* file)
     }
 
     fill_table(priority, file);
-    printf(".");
+    // get the next line of "update" 
+    // iter over it and check if it is valid
+    // by checking priority is first num highest prio? Is second num second highest prio? and so on
+
+    // update ha ~ max 90 chars 
+
+    for (int i = 0; i < 10; i++) {
+        IntArray current_update = get_next_update(file);
+        for (int j = 0; j < current_update.len; j++) {
+            printf("%d: %d\n", j, current_update.ptr[j]);
+        }
+        free(current_update.ptr);
+        current_update.ptr = NULL;
+
+    }
+    
+
+
+
+
+
+
 
     free_table(priority);
     return 0;
@@ -93,6 +122,7 @@ void fill_table(Table t, FILE* file)
         memcpy(buffer_num, buffer_line + 3, 2);
         int numB = atoi(buffer_num);
         // numA has prio over numB
+
         t.table[numA][numB] = true;
     }
 
@@ -108,4 +138,35 @@ void free_table(Table t)
         t.table[i] = NULL;
     }
     free(t.table);
+}
+
+IntArray get_next_update(FILE *file)
+{
+    
+    // line has max 23 numbers per line (I estimated)
+    IntArray a = { calloc(30, sizeof(int)), 0} ;
+    char buffer[3] = {0}; // there are only 2 digit nums
+    char c = 0;
+    int i = 0;
+
+    while (fread(&c, sizeof(char), 1, file)) {
+        // end of line stop 
+        if (c == '\n') {
+            break;
+        }
+        // end of number
+        else if (c == ',') {
+            a.ptr[a.len] = atoi(buffer);
+            a.len++;
+            // reset buffer 
+            i = 0;
+        }
+        // write into buffer 
+        else {
+            buffer[i] = c;
+            ++i;
+        }
+    }
+    a.ptr = realloc(a.ptr, sizeof(int) * a.len);
+    return a;
 }
