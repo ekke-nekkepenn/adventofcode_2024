@@ -60,7 +60,7 @@ int part1(FILE* file)
     }
 
     fill_table(priority, file);
-    printf(".");
+    // next evalute second part of input the "order"
 
     free_table(priority);
     return 0;
