@@ -5,38 +5,38 @@
 #include <string.h>
 
 #define FILENAME "input.txt"
-#define LEN_LINE 6    // each number has 2 digits, so range is 10-99
-#define LEN_DIGIT 2   // first part of input.txt
+#define LEN_LINE 6 // each number has 2 digits, so range is 10-99
+#define LEN_DIGIT 2 // first part of input.txt
 #define LEN_LINE_2 70 // 2nd part of input.txt. Max of 69 chars in a line
 #define SIZE_TABLE 100
 
 typedef struct
 {
-    bool **table;
+    bool** table;
     // size is for rows and columns
     int size;
 } Table;
 
 typedef struct
 {
-    int *ptr;
+    int* ptr;
     int len;
 } IntArray;
 
 // sub main function
-int part1(FILE *file);
-int part2(FILE *file);
+int part1(FILE* file);
+int part2(FILE* file);
 
-void fill_table(Table *t, FILE *file);
-void free_table(Table *t);
+void fill_table(Table* t, FILE* file);
+void free_table(Table* t);
 
-IntArray convert_update(char *s);
+IntArray convert_update(char* s);
 
-bool is_update_valid(IntArray *a, Table *t);
-void sort_by_priority(IntArray *a, Table *t);
-int count_prio(IntArray *a, Table *t, int idx);
+bool is_update_valid(IntArray* a, Table* t);
+void sort_by_priority(IntArray* a, Table* t);
+int count_prio(IntArray* a, Table* t, int idx);
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
 
     if (argc != 2)
@@ -44,21 +44,17 @@ int main(int argc, char **argv)
 
     int result = 0;
 
-    FILE *file = fopen(FILENAME, "r");
+    FILE* file = fopen(FILENAME, "r");
     if (!file)
         return 20;
 
-    if (argv[1][0] == '1')
-    {
+    if (argv[1][0] == '1') {
         result = part1(file);
-    }
-    else if (argv[1][0] == '2')
-    {
+    } else if (argv[1][0] == '2') {
         result = part2(file);
     }
     // wrong cmd param provided
-    else
-    {
+    else {
         fclose(file);
         return 11;
     }
@@ -69,13 +65,12 @@ int main(int argc, char **argv)
     return 0;
 }
 
-int part1(FILE *file)
+int part1(FILE* file)
 {
     int total = 0;
 
-    Table priority = (Table){malloc(sizeof(bool *) * SIZE_TABLE), SIZE_TABLE};
-    for (int i = 0; i < SIZE_TABLE; ++i)
-    {
+    Table priority = (Table) { malloc(sizeof(bool*) * SIZE_TABLE), SIZE_TABLE };
+    for (int i = 0; i < SIZE_TABLE; ++i) {
         priority.table[i] = calloc(SIZE_TABLE, sizeof(bool));
     }
 
@@ -86,11 +81,9 @@ int part1(FILE *file)
 
     // update ha ~ max 90 chars
     char buffer[LEN_LINE_2];
-    while (fgets(buffer, LEN_LINE_2, file))
-    {
+    while (fgets(buffer, LEN_LINE_2, file)) {
         IntArray current_update = convert_update(buffer);
-        if (is_update_valid(&current_update, &priority))
-        {
+        if (is_update_valid(&current_update, &priority)) {
             int median = current_update.ptr[(current_update.len / 2)];
             total = total + median;
         }
@@ -100,27 +93,22 @@ int part1(FILE *file)
     return total;
 }
 
-int part2(FILE *file)
+int part2(FILE* file)
 {
     // for comments look at part 1
     int total = 0;
 
-    Table priority = (Table){malloc(sizeof(bool *) * SIZE_TABLE), SIZE_TABLE};
-    for (int i = 0; i < SIZE_TABLE; ++i)
-    {
+    Table priority = (Table) { malloc(sizeof(bool*) * SIZE_TABLE), SIZE_TABLE };
+    for (int i = 0; i < SIZE_TABLE; ++i) {
         priority.table[i] = calloc(SIZE_TABLE, sizeof(bool));
     }
 
     fill_table(&priority, file);
 
     char buffer[LEN_LINE_2];
-    while (fgets(buffer, LEN_LINE_2, file))
-    {
+    while (fgets(buffer, LEN_LINE_2, file)) {
         IntArray current_update = convert_update(buffer);
-        if (!is_update_valid(&current_update, &priority))
-        {
-            // sort array by priority and return median;
-            sort_by_priority(&current_update, &priority);
+        if (!is_update_valid(&current_update, &priority)) {
             int median = current_update.ptr[(current_update.len / 2)];
             total = total + median;
         }
@@ -130,17 +118,15 @@ int part2(FILE *file)
     return total;
 }
 
-void fill_table(Table *t, FILE *file)
+void fill_table(Table* t, FILE* file)
 {
-    char *buffer_line = calloc(LEN_LINE + 1, sizeof(char));
-    char *buffer_num = calloc(LEN_DIGIT + 1, sizeof(char));
+    char* buffer_line = calloc(LEN_LINE + 1, sizeof(char));
+    char* buffer_num = calloc(LEN_DIGIT + 1, sizeof(char));
 
     // read line for line
-    while (fgets(buffer_line, LEN_LINE + 1, file))
-    {
+    while (fgets(buffer_line, LEN_LINE + 1, file)) {
         // stop at newline because we only need first half of input here
-        if (buffer_line[0] == '\n')
-        {
+        if (buffer_line[0] == '\n') {
             break;
         }
 
@@ -158,42 +144,38 @@ void fill_table(Table *t, FILE *file)
     free(buffer_num);
 }
 
-void free_table(Table *t)
+void free_table(Table* t)
 {
     // free table
-    for (int i = 0; i < t->size; ++i)
-    {
+    for (int i = 0; i < t->size; ++i) {
         free(t->table[i]);
         t->table[i] = NULL;
     }
     free(t->table);
 }
 
-IntArray convert_update(char *s)
+IntArray convert_update(char* s)
 {
 
     // line has max 23 numbers per line (I estimated)
-    IntArray a = {calloc(LEN_LINE_2, sizeof(int)), 0};
-    int *p = a.ptr;
+    IntArray a = { calloc(LEN_LINE_2, sizeof(int)), 0 };
+    int* p = a.ptr;
 
-    char buffer[LEN_DIGIT + 1] = {0}; // there are only 2 digit nums
-    char *b = buffer;
+    char buffer[LEN_DIGIT + 1] = { 0 }; // there are only 2 digit nums
+    char* b = buffer;
     char c;
 
     // turn "53, 32, 12, 56\n" -> int [53, 32, 12, 56] as a IntArray
-    while ((c = *s++) != '\n')
-    {
+    while ((c = *s++) != '\n') {
         // end of number
-        if (c == ',')
-        {
+        if (c == ',') {
             *p++ = atoi(buffer);
             a.len++;
             // reset buffer index
             b = &buffer[0];
         }
         // write into buffer
-        else
-        {
+        else {
             *b++ = c;
         }
     }
@@ -205,20 +187,17 @@ IntArray convert_update(char *s)
     return a;
 }
 
-bool is_update_valid(IntArray *a, Table *t)
+bool is_update_valid(IntArray* a, Table* t)
 {
     // iter over each num except last (i)
     int n = a->len - 2;
-    for (int i = 0; i < n; ++i)
-    {
+    for (int i = 0; i < n; ++i) {
         int numA = a->ptr[i];
         // iter over next nums and check if they have prio
-        for (int j = 1 + i; j < a->len; ++j)
-        {
+        for (int j = 1 + i; j < a->len; ++j) {
             int numB = a->ptr[j];
             // does numB have prio over numA
-            if (t->table[numB][numA])
-            {
+            if (t->table[numB][numA]) {
                 return false;
             }
         }
@@ -227,46 +206,14 @@ bool is_update_valid(IntArray *a, Table *t)
     return true;
 }
 
-void sort_by_priority(IntArray *a, Table *t)
+void fix_invalid_update(IntArray* a, Table* t)
 {
-
-    // simple insertion sort
-    int idx, tmp;
-    for (int i = 0; i < a->len; ++i)
-    {
-        int highest_prio = -1;
-        for (int j = 0 + i; j < a->len; ++j)
-        {
-            int current_prio = count_prio(a, t, j);
-
-            if (current_prio > highest_prio)
-            {
-                idx = j;
-                highest_prio = current_prio;
-            }
-        }
-        tmp = a->ptr[i];
-        a->ptr[i] = a->ptr[idx];
-        a->ptr[idx] = tmp;
-    }
-    for (int i = 0; i < a->len; ++i)
-    {
-        printf("%d, ", a->ptr[i]);
-    }
-    printf("\n");
-}
-
-int count_prio(IntArray *a, Table *t, int idx)
-{
-    int prio_n = 0;
-    for (int i = 0; i < a->len; ++i)
-    {
+    int idx;
+    for (int i = 0; i < a->len; ++i) {
         int numA = a->ptr[i];
-        for (int j = 1 + i; j < a->len; ++j)
-        {
+        for (int j = 1 + i; j < a->len; ++j) {
             int numB = a->ptr[j];
-            prio_n += t->table[numA][numB];
+            if (int)
         }
     }
-    return prio_n;
 }
