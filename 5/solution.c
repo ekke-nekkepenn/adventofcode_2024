@@ -33,6 +33,8 @@ void free_table(Table *t);
 IntArray convert_update(char *s);
 
 bool is_update_valid(IntArray *a, Table *t);
+void sort_by_priority(IntArray *a, Table *t);
+int count_prio(IntArray *a, Table *t, int idx);
 
 int main(int argc, char **argv)
 {
@@ -100,7 +102,32 @@ int part1(FILE *file)
 
 int part2(FILE *file)
 {
-    return 0;
+    // for comments look at part 1
+    int total = 0;
+
+    Table priority = (Table){malloc(sizeof(bool *) * SIZE_TABLE), SIZE_TABLE};
+    for (int i = 0; i < SIZE_TABLE; ++i)
+    {
+        priority.table[i] = calloc(SIZE_TABLE, sizeof(bool));
+    }
+
+    fill_table(&priority, file);
+
+    char buffer[LEN_LINE_2];
+    while (fgets(buffer, LEN_LINE_2, file))
+    {
+        IntArray current_update = convert_update(buffer);
+        if (!is_update_valid(&current_update, &priority))
+        {
+            // sort array by priority and return median;
+            sort_by_priority(&current_update, &priority);
+            int median = current_update.ptr[(current_update.len / 2)];
+            total = total + median;
+        }
+    }
+
+    free_table(&priority);
+    return total;
 }
 
 void fill_table(Table *t, FILE *file)
@@ -170,8 +197,11 @@ IntArray convert_update(char *s)
             *b++ = c;
         }
     }
+
+    *p = atoi(buffer);
     a.len++;
-    // a.ptr = realloc(a.ptr, sizeof(int) * a.len);
+
+    a.ptr = realloc(a.ptr, sizeof(int) * a.len);
     return a;
 }
 
@@ -179,11 +209,11 @@ bool is_update_valid(IntArray *a, Table *t)
 {
     // iter over each num except last (i)
     int n = a->len - 2;
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; ++i)
     {
         int numA = a->ptr[i];
         // iter over next nums and check if they have prio
-        for (int j = 1 + i; j < a->len; j++)
+        for (int j = 1 + i; j < a->len; ++j)
         {
             int numB = a->ptr[j];
             // does numB have prio over numA
@@ -195,4 +225,48 @@ bool is_update_valid(IntArray *a, Table *t)
     }
 
     return true;
+}
+
+void sort_by_priority(IntArray *a, Table *t)
+{
+
+    // simple insertion sort
+    int idx, tmp;
+    for (int i = 0; i < a->len; ++i)
+    {
+        int highest_prio = -1;
+        for (int j = 0 + i; j < a->len; ++j)
+        {
+            int current_prio = count_prio(a, t, j);
+
+            if (current_prio > highest_prio)
+            {
+                idx = j;
+                highest_prio = current_prio;
+            }
+        }
+        tmp = a->ptr[i];
+        a->ptr[i] = a->ptr[idx];
+        a->ptr[idx] = tmp;
+    }
+    for (int i = 0; i < a->len; ++i)
+    {
+        printf("%d, ", a->ptr[i]);
+    }
+    printf("\n");
+}
+
+int count_prio(IntArray *a, Table *t, int idx)
+{
+    int prio_n = 0;
+    for (int i = 0; i < a->len; ++i)
+    {
+        int numA = a->ptr[i];
+        for (int j = 1 + i; j < a->len; ++j)
+        {
+            int numB = a->ptr[j];
+            prio_n += t->table[numA][numB];
+        }
+    }
+    return prio_n;
 }
