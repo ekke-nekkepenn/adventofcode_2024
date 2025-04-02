@@ -5,35 +5,35 @@
 #include <string.h>
 
 #define FILENAME "input.txt"
-#define LEN_LINE 6 // each number has 2 digits, so range is 10-99
-#define LEN_DIGIT 2 // first part of input.txt
+#define LEN_LINE 6
+#define LEN_DIGIT 2
 #define LEN_LINE_2 70 // 2nd part of input.txt. Max of 69 chars in a line
-#define SIZE_TABLE 100
+#define SIZE_TABLE 100 // ik ik some spots in the table are not used idc
 
 typedef struct
 {
     bool** table;
-    // size is for rows and columns
-    int size;
+    int size; // # rows and columns are the same
 } Table;
 
 typedef struct
 {
     int* ptr;
-    int len;
+    int len; // len is also capicity in this case
 } IntArray;
 
-// sub main function
+// sub function in main
 int part1(FILE* file);
 int part2(FILE* file);
 
+// create/modify data structs
 void fill_table(Table* t, FILE* file);
 void free_table(Table* t);
-
 IntArray convert_update(char* s);
-
-bool is_update_valid(IntArray* a, Table* t);
 void sort_by_priority(IntArray* a, Table* t);
+
+// misc
+bool is_update_valid(IntArray* a, Table* t);
 int count_prio(IntArray* a, Table* t, int idx);
 
 int main(int argc, char** argv)
@@ -53,13 +53,13 @@ int main(int argc, char** argv)
     } else if (argv[1][0] == '2') {
         result = part2(file);
     }
-    // wrong cmd param provided
+
     else {
         fclose(file);
         return 11;
     }
 
-    printf("result for Part %c: %d\n", argv[1][0], result);
+    printf("result for Part %s: %d\n", argv[1], result);
 
     fclose(file);
     return 0;
@@ -87,6 +87,7 @@ int part1(FILE* file)
             int median = current_update.ptr[(current_update.len / 2)];
             total = total + median;
         }
+        free(current_update.ptr);
     }
 
     free_table(&priority);
@@ -109,9 +110,12 @@ int part2(FILE* file)
     while (fgets(buffer, LEN_LINE_2, file)) {
         IntArray current_update = convert_update(buffer);
         if (!is_update_valid(&current_update, &priority)) {
+            sort_by_priority(&current_update, &priority);
             int median = current_update.ptr[(current_update.len / 2)];
             total = total + median;
         }
+        free(current_update.ptr);
+        current_update.ptr = NULL;
     }
 
     free_table(&priority);
@@ -152,6 +156,7 @@ void free_table(Table* t)
         t->table[i] = NULL;
     }
     free(t->table);
+    t->table = NULL;
 }
 
 IntArray convert_update(char* s)
@@ -206,14 +211,57 @@ bool is_update_valid(IntArray* a, Table* t)
     return true;
 }
 
-void fix_invalid_update(IntArray* a, Table* t)
+int count_prio(IntArray* a, Table* t, int idx)
 {
-    int idx;
+    // count how often element at index idx has prio over every other num in array
+    int prio = 0;
+    int numA = a->ptr[idx];
     for (int i = 0; i < a->len; ++i) {
-        int numA = a->ptr[i];
-        for (int j = 1 + i; j < a->len; ++j) {
-            int numB = a->ptr[j];
-            if (int)
+        // no need to count itself but even if, [numA][numA] has prio 0;
+        if (numA == a->ptr[i])
+            continue;
+        prio = prio + t->table[numA][a->ptr[i]];
+    }
+    return prio;
+}
+
+void sort_by_priority(IntArray* a, Table* t)
+{
+    // how do we sort this mess?
+    // first we should count each prio N for each number
+    // where do we store this?
+    // like in a python dictionary for example?
+    // key = numA, value = prio N; ??
+    // IK IK Not really a dictionary. There is no hash here and we have to iter. IDC
+    typedef struct {
+        int key;
+        int value;
+    } KeyValue;
+
+    KeyValue* dict = malloc(sizeof(KeyValue) * a->len);
+
+    // fill pseudo dictionary
+    for (int i = 0; i < a->len; ++i) {
+        KeyValue kv = (KeyValue) { a->ptr[i], count_prio(a, t, i) };
+        dict[i] = kv;
+    }
+    // sort the pseudo dictionary (Bubble sort)
+    for (int i = 0; i < a->len - 1; ++i) {
+        for (int j = 0; j < a->len - i - 1; ++j) {
+            if (dict[j].value > dict[j + 1].value) {
+                KeyValue tmp = dict[j];
+                dict[j] = dict[j + 1];
+                dict[j + 1] = tmp;
+            }
         }
     }
+
+    // copy the order of the peusdo dictionary to the IntArray
+    for (int i = 0; i < a->len; ++i) {
+        a->ptr[i] = dict[i].key;
+        printf("key: %d value: %d\n", a->ptr[i], dict[i].value);
+    }
+    printf("\n");
+
+    free(dict);
 }
