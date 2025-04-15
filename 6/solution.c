@@ -24,6 +24,7 @@ int64_t part2(FILE *file);
 void measure_size(int16_t *w, int16_t *h, FILE *file);
 void free_table(CharTable *t);
 void rotate_clockwise(IntPair *dir);
+void get_guard_pos(int16_t *x, int16_t *y, CharTable *room);
 
 int main(int argc, char **argv)
 {
@@ -66,42 +67,27 @@ int64_t part1(FILE *file)
     int64_t result = 0;
 
     CharTable room = (CharTable){NULL, 0, 0};
-    // determine size of CharTable
     measure_size(&room.width, &room.height, file);
-    // printf("room width: %d, height: %d\n", room.width, room.height);
-    room.start = malloc(sizeof(char *) * room.height);
 
     // read file data into CharTable
-    char *line;
+    room.start = malloc(sizeof(char *) * room.height);
     for (int i = 0; i < room.height; ++i)
     {
-        line = malloc(sizeof(char) * room.width);
-        fread(line, sizeof(char), room.width, file);
+        char *line = malloc(sizeof(char) * room.width);
+        fgets(line, room.width + 1, file);
         room.start[i] = line;
-
-        // printf("%d\t%s", i, line);
     }
 
-    IntPair pos; // position of guard
-    pos.x = -10;
-    pos.y = -10;
-    for (int16_t i = 0; i < room.height; ++i)
-    {
-        for (int16_t j = 0; j < room.width - 1; ++j)
-        {
-            if (room.start[i][j] == '^')
-            {
-                pos.x = j;
-                pos.y = i;
-            }
-        }
-    }
-    IntPair dir = (IntPair){.x = 0, .y = -1}; // guard is facing this way
-    // store visited positions
+    // guard stats
+    IntPair dir = (IntPair){.x = 0, .y = -1}; // guard is facing north
+    IntPair pos = (IntPair){.x = 0, .y = 0};
+    get_guard_pos(&pos.x, &pos.y, &room);
+
+    // positions to mark when visited
     bool visited[room.height][room.width - 1];
-    memset(visited, 0, room.height * (room.width - 1));
-
+    memset(visited, 0, (room.height * (room.width - 1)));
     visited[pos.y][pos.x] = true;
+
     // guard starts patrolling
     int16_t nx, ny;
     while (true)
@@ -109,12 +95,12 @@ int64_t part1(FILE *file)
         nx = pos.x + dir.x;
         ny = pos.y + dir.y;
         // first check if new position is in bounds
-        if (nx < 0 || ny < 0 || nx >= room.width || ny >= room.height)
+        if (nx < 0 || ny < 0 || nx >= room.width - 1 || ny >= room.height)
         {
             break;
         }
         // check if new position is occupied by stuff
-        if (room.start[ny][nx] != '.')
+        if (room.start[ny][nx] == '#')
         {
             rotate_clockwise(&dir);
         }
@@ -130,7 +116,7 @@ int64_t part1(FILE *file)
     // count the visited positions
     for (int i = 0; i < room.height; ++i)
     {
-        for (int j = 0; j < room.width; ++j)
+        for (int j = 0; j < room.width - 1; ++j)
         {
             if (visited[i][j])
             {
@@ -152,10 +138,10 @@ int64_t part2(FILE *file)
 void measure_size(int16_t *w, int16_t *h, FILE *file)
 {
     char c;
-    int f = 1;
+    int f = -1;
     while (fread(&c, sizeof(char), 1, file))
     {
-        if (f)
+        if (f != 0)
             ++*w;
 
         if (c == '\n')
@@ -165,6 +151,24 @@ void measure_size(int16_t *w, int16_t *h, FILE *file)
         }
     }
     rewind(file);
+}
+
+void get_guard_pos(int16_t *x, int16_t *y, CharTable *room)
+{
+
+    for (; *y < room->height; ++(*y))
+    {
+        for (; *x < room->width - 1; ++(*x))
+        {
+            if (room->start[*y][*x] == '^')
+            {
+                return;
+            }
+        }
+        *x = 0;
+    }
+    printf("\nPosition of guard not found!\n");
+    return;
 }
 
 void free_table(CharTable *t)
@@ -199,6 +203,6 @@ void rotate_clockwise(IntPair *dir)
     else if (dir->x == -1)
     {
         dir->x = 0;
-        dir->y = 1;
+        dir->y = -1;
     }
 }
