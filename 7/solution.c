@@ -213,7 +213,7 @@ void compare_leaf_nodes(Node *current_node, Context *context)
 
     // printf("%ld\n", current_node->value);
 
-    if (context->found == false && current_node->value == context->value)
+    if (context->found == false && current_node->value == context->value && current_node->left == NULL)
     {
         // printf("\tFound matching value: %ld (%ld)\n", current_node->value, context->value);
         context->found = true;
